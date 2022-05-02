@@ -25,6 +25,7 @@ Todo:
 |                         |
 |-------------------------|
 """
+
 import serial
 import glob
 import time
@@ -79,17 +80,13 @@ class BuchuSerial():
             return True
         except serial.SerialException:
             print('Port is not available')
-            self.portConfig.close()
-            print('tryin to reconnect port')
-            time.sleep(2)
-            self.serialBegin()
-
+            return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
+            return False
         except:
-            self.portConfig.close()
-            time.sleep(2)
-            self.serialBegin()
+            #self.portConfig.close()
+            print('Write Error: Unknown')
             return False
 
 #Raw serial write
@@ -99,16 +96,12 @@ class BuchuSerial():
             return True
         except serial.SerialException:
             print('Port is not available')
-            self.portConfig.close()
-            print('tryin to reconnect port')
-            time.sleep(2)
-            self.serialBegin()
+            return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
+            return False
         except:
-            self.portConfig.close()
-            time.sleep(2)
-            self.serialBegin()
+            print('Write Error: Unknown')
             return False
 
 # Open a connection with the specified port 
