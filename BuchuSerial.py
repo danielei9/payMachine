@@ -10,6 +10,20 @@ Todo:
     * Review some doc and 
     * Feature auto-select port
 
+|--------BuchuSerial------|
+|        __init__     setBaudrate()    
+|        baudrate     serial_ports()
+|                     serialBegin()
+|                     serialWriteString(str)
+|                     serialWrite()
+|                     serialOpen()
+|                     serialReadLine()
+|                     serialxBytesToRead(R:x)
+|                     serialAvailable()
+|                     serialClose()
+|                     serialSend(data,ttl)
+|                         |
+|-------------------------|
 """
 import serial
 import glob
@@ -18,9 +32,8 @@ import time
 
 class BuchuSerial():
     baudrate = 9600
-    
     def __init__(self):
-        portConfig = self.serialBegin(self.baudrate)
+        self.portConfig = self.serialBegin()
 
 # Setter  for serial baudrete
     def setBaudrate(self, _baudrate):
@@ -42,19 +55,19 @@ class BuchuSerial():
         return result
 
 # Begin serial connection
-    def serialBegin(self, baud):
+    def serialBegin(self):
         try:
             ports = self.serial_ports()
-            print("Connecting to " + str(ports))
+            print("Connecting to " + str(ports[0]))
             portConfig = serial.Serial(port=ports[0],
-                                       baudrate=baud,
+                                       baudrate=self.baudrate,
                                        bytesize=serial.EIGHTBITS,
                                        parity=serial.PARITY_NONE,
                                        stopbits=serial.STOPBITS_ONE)
         except:
-            print("ReConnecting to " + str(self.serial_ports()[0]))
+            print("ReConnecting to " + str(ports[0]))
             time.sleep(5)
-            self.serialBegin(baud)
+            self.serialBegin()
             return False
             # pass
         return portConfig
@@ -69,14 +82,14 @@ class BuchuSerial():
             self.portConfig.close()
             print('tryin to reconnect port')
             time.sleep(2)
-            self.serialBegin(9600)
+            self.serialBegin()
 
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
         except:
             self.portConfig.close()
             time.sleep(2)
-            self.serialBegin(9600)
+            self.serialBegin()
             return False
 
 #Raw serial write
@@ -89,13 +102,13 @@ class BuchuSerial():
             self.portConfig.close()
             print('tryin to reconnect port')
             time.sleep(2)
-            self.serialBegin(9600)
+            self.serialBegin()
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
         except:
             self.portConfig.close()
             time.sleep(2)
-            self.serialBegin(9600)
+            self.serialBegin()
             return False
 
 # Open a connection with the specified port 
@@ -187,5 +200,6 @@ class BuchuSerial():
             if (endTimeOut - startTimeOut >= TTL):  # TODO: DEFINE TTL
                 return -1
         response = self.serialReadLine()
+#         print(response)
         self.serialClose()
         return response
