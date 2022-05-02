@@ -200,6 +200,7 @@ class BuchuSerial():
             if (endTimeOut - startTimeOut >= TTL):  # TODO: DEFINE TTL
                 return -1
         response = self.serialReadLine()
-#         print(response)
+        # print(response)
         self.serialClose()
         return response
+
