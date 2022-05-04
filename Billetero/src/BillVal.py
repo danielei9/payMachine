@@ -6,7 +6,7 @@ import logging
 
 
 ###
-### Constants
+# Constants
 ###
 CHANGE_CONFIG_RECYCLER = 0xF0, 0x20, 0xD0
 ### General UCEMACHINES ###
@@ -254,71 +254,69 @@ OPTIONS = {
 # second byte:
 BAR_18_CHAR = 0x12
 BAR_MULTI = 0xFF  # required if OPT_24CHAR is set?
-
-#Exceptions 
+##
+# Exceptions
+##
 class CRCError(Exception):
     """Computed CRC does not match given CRC"""
     pass
-
 
 class SyncError(Exception):
     """Tried to read a message, but got wrong start byte"""
     pass
 
-
 class PowerUpError(Exception):
     """Expected power up, but received wrong status"""
     pass
-
 
 class AckError(Exception):
     """Acceptor did not acknowledge as expected"""
     pass
 
-
 class DenomError(Exception):
     """Unknown denomination reported in escrow"""
     pass
-
-#CRC CONFIG 
+###################################################
+# CRC CONFIG
+###################################################
 
 def get_crc(message):
     """Get CRC value for a given bytes object using CRC-CCITT Kermit"""
 
     TABLE = [
-      0x0000, 0x1189, 0x2312, 0x329B, 0x4624, 0x57AD, 0x6536, 0x74BF,
-      0x8C48, 0x9DC1, 0xAF5A, 0xBED3, 0xCA6C, 0xDBE5, 0xE97E, 0xF8F7,
-      0x1081, 0x0108, 0x3393, 0x221A, 0x56A5, 0x472C, 0x75B7, 0x643E,
-      0x9CC9, 0x8D40, 0xBFDB, 0xAE52, 0xDAED, 0xCB64, 0xF9FF, 0xE876,
-      0x2102, 0x308B, 0x0210, 0x1399, 0x6726, 0x76AF, 0x4434, 0x55BD,
-      0xAD4A, 0xBCC3, 0x8E58, 0x9FD1, 0xEB6E, 0xFAE7, 0xC87C, 0xD9F5,
-      0x3183, 0x200A, 0x1291, 0x0318, 0x77A7, 0x662E, 0x54B5, 0x453C,
-      0xBDCB, 0xAC42, 0x9ED9, 0x8F50, 0xFBEF, 0xEA66, 0xD8FD, 0xC974,
-      0x4204, 0x538D, 0x6116, 0x709F, 0x0420, 0x15A9, 0x2732, 0x36BB,
-      0xCE4C, 0xDFC5, 0xED5E, 0xFCD7, 0x8868, 0x99E1, 0xAB7A, 0xBAF3,
-      0x5285, 0x430C, 0x7197, 0x601E, 0x14A1, 0x0528, 0x37B3, 0x263A,
-      0xDECD, 0xCF44, 0xFDDF, 0xEC56, 0x98E9, 0x8960, 0xBBFB, 0xAA72,
-      0x6306, 0x728F, 0x4014, 0x519D, 0x2522, 0x34AB, 0x0630, 0x17B9,
-      0xEF4E, 0xFEC7, 0xCC5C, 0xDDD5, 0xA96A, 0xB8E3, 0x8A78, 0x9BF1,
-      0x7387, 0x620E, 0x5095, 0x411C, 0x35A3, 0x242A, 0x16B1, 0x0738,
-      0xFFCF, 0xEE46, 0xDCDD, 0xCD54, 0xB9EB, 0xA862, 0x9AF9, 0x8B70,
-      0x8408, 0x9581, 0xA71A, 0xB693, 0xC22C, 0xD3A5, 0xE13E, 0xF0B7,
-      0x0840, 0x19C9, 0x2B52, 0x3ADB, 0x4E64, 0x5FED, 0x6D76, 0x7CFF,
-      0x9489, 0x8500, 0xB79B, 0xA612, 0xD2AD, 0xC324, 0xF1BF, 0xE036,
-      0x18C1, 0x0948, 0x3BD3, 0x2A5A, 0x5EE5, 0x4F6C, 0x7DF7, 0x6C7E,
-      0xA50A, 0xB483, 0x8618, 0x9791, 0xE32E, 0xF2A7, 0xC03C, 0xD1B5,
-      0x2942, 0x38CB, 0x0A50, 0x1BD9, 0x6F66, 0x7EEF, 0x4C74, 0x5DFD,
-      0xB58B, 0xA402, 0x9699, 0x8710, 0xF3AF, 0xE226, 0xD0BD, 0xC134,
-      0x39C3, 0x284A, 0x1AD1, 0x0B58, 0x7FE7, 0x6E6E, 0x5CF5, 0x4D7C,
-      0xC60C, 0xD785, 0xE51E, 0xF497, 0x8028, 0x91A1, 0xA33A, 0xB2B3,
-      0x4A44, 0x5BCD, 0x6956, 0x78DF, 0x0C60, 0x1DE9, 0x2F72, 0x3EFB,
-      0xD68D, 0xC704, 0xF59F, 0xE416, 0x90A9, 0x8120, 0xB3BB, 0xA232,
-      0x5AC5, 0x4B4C, 0x79D7, 0x685E, 0x1CE1, 0x0D68, 0x3FF3, 0x2E7A,
-      0xE70E, 0xF687, 0xC41C, 0xD595, 0xA12A, 0xB0A3, 0x8238, 0x93B1,
-      0x6B46, 0x7ACF, 0x4854, 0x59DD, 0x2D62, 0x3CEB, 0x0E70, 0x1FF9,
-      0xF78F, 0xE606, 0xD49D, 0xC514, 0xB1AB, 0xA022, 0x92B9, 0x8330,
-      0x7BC7, 0x6A4E, 0x58D5, 0x495C, 0x3DE3, 0x2C6A, 0x1EF1, 0x0F78
-]
+        0x0000, 0x1189, 0x2312, 0x329B, 0x4624, 0x57AD, 0x6536, 0x74BF,
+        0x8C48, 0x9DC1, 0xAF5A, 0xBED3, 0xCA6C, 0xDBE5, 0xE97E, 0xF8F7,
+        0x1081, 0x0108, 0x3393, 0x221A, 0x56A5, 0x472C, 0x75B7, 0x643E,
+        0x9CC9, 0x8D40, 0xBFDB, 0xAE52, 0xDAED, 0xCB64, 0xF9FF, 0xE876,
+        0x2102, 0x308B, 0x0210, 0x1399, 0x6726, 0x76AF, 0x4434, 0x55BD,
+        0xAD4A, 0xBCC3, 0x8E58, 0x9FD1, 0xEB6E, 0xFAE7, 0xC87C, 0xD9F5,
+        0x3183, 0x200A, 0x1291, 0x0318, 0x77A7, 0x662E, 0x54B5, 0x453C,
+        0xBDCB, 0xAC42, 0x9ED9, 0x8F50, 0xFBEF, 0xEA66, 0xD8FD, 0xC974,
+        0x4204, 0x538D, 0x6116, 0x709F, 0x0420, 0x15A9, 0x2732, 0x36BB,
+        0xCE4C, 0xDFC5, 0xED5E, 0xFCD7, 0x8868, 0x99E1, 0xAB7A, 0xBAF3,
+        0x5285, 0x430C, 0x7197, 0x601E, 0x14A1, 0x0528, 0x37B3, 0x263A,
+        0xDECD, 0xCF44, 0xFDDF, 0xEC56, 0x98E9, 0x8960, 0xBBFB, 0xAA72,
+        0x6306, 0x728F, 0x4014, 0x519D, 0x2522, 0x34AB, 0x0630, 0x17B9,
+        0xEF4E, 0xFEC7, 0xCC5C, 0xDDD5, 0xA96A, 0xB8E3, 0x8A78, 0x9BF1,
+        0x7387, 0x620E, 0x5095, 0x411C, 0x35A3, 0x242A, 0x16B1, 0x0738,
+        0xFFCF, 0xEE46, 0xDCDD, 0xCD54, 0xB9EB, 0xA862, 0x9AF9, 0x8B70,
+        0x8408, 0x9581, 0xA71A, 0xB693, 0xC22C, 0xD3A5, 0xE13E, 0xF0B7,
+        0x0840, 0x19C9, 0x2B52, 0x3ADB, 0x4E64, 0x5FED, 0x6D76, 0x7CFF,
+        0x9489, 0x8500, 0xB79B, 0xA612, 0xD2AD, 0xC324, 0xF1BF, 0xE036,
+        0x18C1, 0x0948, 0x3BD3, 0x2A5A, 0x5EE5, 0x4F6C, 0x7DF7, 0x6C7E,
+        0xA50A, 0xB483, 0x8618, 0x9791, 0xE32E, 0xF2A7, 0xC03C, 0xD1B5,
+        0x2942, 0x38CB, 0x0A50, 0x1BD9, 0x6F66, 0x7EEF, 0x4C74, 0x5DFD,
+        0xB58B, 0xA402, 0x9699, 0x8710, 0xF3AF, 0xE226, 0xD0BD, 0xC134,
+        0x39C3, 0x284A, 0x1AD1, 0x0B58, 0x7FE7, 0x6E6E, 0x5CF5, 0x4D7C,
+        0xC60C, 0xD785, 0xE51E, 0xF497, 0x8028, 0x91A1, 0xA33A, 0xB2B3,
+        0x4A44, 0x5BCD, 0x6956, 0x78DF, 0x0C60, 0x1DE9, 0x2F72, 0x3EFB,
+        0xD68D, 0xC704, 0xF59F, 0xE416, 0x90A9, 0x8120, 0xB3BB, 0xA232,
+        0x5AC5, 0x4B4C, 0x79D7, 0x685E, 0x1CE1, 0x0D68, 0x3FF3, 0x2E7A,
+        0xE70E, 0xF687, 0xC41C, 0xD595, 0xA12A, 0xB0A3, 0x8238, 0x93B1,
+        0x6B46, 0x7ACF, 0x4854, 0x59DD, 0x2D62, 0x3CEB, 0x0E70, 0x1FF9,
+        0xF78F, 0xE606, 0xD49D, 0xC514, 0xB1AB, 0xA022, 0x92B9, 0x8330,
+        0x7BC7, 0x6A4E, 0x58D5, 0x495C, 0x3DE3, 0x2C6A, 0x1EF1, 0x0F78
+    ]
 
     crc = 0x0000
     for byte in message:
@@ -330,15 +328,17 @@ def get_crc(message):
 
     return bytes(crc)
 
-##
-## CLASS BILLVAL
+###################################################
+# CLASS BILLVAL
 # represena el billeterom, sus diferentes estados y repseustas
-##
+###################################################
+
 class BillVal:
     """Represent an ID-003 bill validator as a subclass of `serial.Serial`"""
 
     def __init__(self, port, log_raw=False, threading=False):
-        self.com = serial.Serial(port, 9600, serial.EIGHTBITS, serial.PARITY_EVEN, timeout=0.05)
+        self.com = serial.Serial(
+            port, 9600, serial.EIGHTBITS, serial.PARITY_EVEN, timeout=0.05)
 
         self.bv_status = None
         self.bv_version = None
@@ -346,7 +346,7 @@ class BillVal:
         self.threading = threading
 
         self.all_statuses = NORM_STATUSES + ERROR_STATUSES + POW_STATUSES
-#         se definen los eventos de la uart 
+#         se definen los eventos de la uart
         self.bv_events = {
             IDLE: self._on_idle,
             ACEPTING: self._on_accepting,
@@ -376,7 +376,7 @@ class BillVal:
 
         # set up logging
         self.raw = log_raw
-#         LOGGING 
+#         LOGGING
         if not logging.getLogger('').hasHandlers():
             logging.basicConfig(level=logging.DEBUG,
                                 format="[%(asctime)s] %(levelname)s: %(message)s",
@@ -389,6 +389,7 @@ class BillVal:
             console.setFormatter(formatter)
             logging.getLogger('').addHandler(console)
 # RAW LOGGING
+
     def _raw(self, pre, msg):
         if self.raw:
             msg = ['0x%02x' % x for x in msg]
@@ -398,46 +399,48 @@ class BillVal:
 #
 #  UART STATES
 #
-
-#  BOX FULL
+#       BOX FULL
     def _on_stacker_full(self, data):
         logging.error("Stacker full.")
-#  Stacker OPEN
+#       Stacker OPEN
+
     def _on_stacker_open(self, data):
         logging.warning("Stacker open.")
-# ACEPTANDO BILLETES
+#       ACEPTANDO BILLETES
     def _on_acceptor_jam(self, data):
         logging.error("Acceptor jam.")
-
+#
     def _on_stacker_jam(self, data):
         logging.error("Stacker jam.")
-# Cuanto el estado es pausa
+#       Cuanto el estado es pausa
     def _on_pause(self, data):
-        logging.warning("BV paused. If there's a second bill being inserted, remove it.")
-
+        logging.warning(
+            "BV paused. If there's a second bill being inserted, remove it.")
+#
     def _on_cheated(self, data):
         logging.warning("BV cheated.")
-
+#
     def _on_failure(self, data):
         fault = ord(data)
         if fault not in FAILURE_CODES:
             logging.error("Unknown failure: %02x" % fault)
         else:
             logging.error(FAILURE_CODES[fault])
-
+#
     def _on_comm_error(self, data):
         logging.warning("Communication error.")
         logging.debug("Details: %r" % ['0x%02x' % x for x in data])
-
+#
     def _on_invalid_command(self, data):
+#
         logging.warning("Invalid command.")
-
+#
     def _on_idle(self, data):
         logging.info("BV idle.")
-
+#
     def _on_accepting(self, data):
         logging.info("BV accepting...")
-
+#
     def _on_escrow(self, data):
         """
         CUANDO RECIBE DINERO EL BILLETERO
@@ -486,32 +489,32 @@ class BillVal:
                     status, data = self.read_response()
                 logging.debug("Received ACK")
                 self.bv_status = None
-
-
+#
     def _on_stacking(self, data):
         logging.info("BV stacking...")
-
+#
     def _on_vend_valid(self, data):
         logging.info("Vend valid for %s." % self.accepting_denom)
         self.send_command(ACK, b'')
         self.accepting_denom = None
-
+#
     def _on_stacked(self, data):
         logging.info("Stacked.")
-
+#
     def _on_rejecting(self, data):
         reason = ord(data)
         if reason in REJECT_REASONS:
-            logging.warning("BV rejecting, reason: %s" % REJECT_REASONS[reason])
+            logging.warning("BV rejecting, reason: %s" %
+                            REJECT_REASONS[reason])
         else:
             logging.warning("BV rejecting, unknown reason: %02x" % reason)
-
+#
     def _on_returning(self, data):
         logging.info("BV Returning...")
-
+#
     def _on_holding(self, data):
         logging.info("Holding...")
-
+#
     def _on_inhibit(self, data):
         logging.warning("BV inhibited.")
         input("Press enter to reset and initialize BV.")
@@ -526,15 +529,15 @@ class BillVal:
             logging.info("Initializing bill validator...")
             self.initialize()
         self.bv_status = None
-
+#
     def _on_init(self, data):
         logging.warning("BV waiting for initialization")
         input("Press enter to reinitialize the BV.")
         self.initialize()
-## 
-##  Send default command 
-#       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2   
-## 
+###################################################
+# Send default command
+#       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2
+###################################################
     def send_command(self, command, data=b''):
         """Send a generic command to the bill validator"""
 
@@ -546,9 +549,11 @@ class BillVal:
         self._raw('>', message)
 
         return self.com.write(message)
-
+###################################################
+# Read default command
+###################################################
     def read_response(self):
-        """Parse data from the bill validator. Returns a tuple (command, data)"""
+        """Parse data del billetero. Devuelve una tuple (command, data)"""
 
         start = None
         while start == None:
@@ -580,17 +585,20 @@ class BillVal:
         # check our data
         if get_crc(full_msg) != crc:
             pass
-#             raise CRCError("CRC mismatch")
+            #raise CRCError("CRC mismatch") (TODO:fallo con crc a veces revisar)
 
         return ord(command), data
-
+###################################################
+#  POWER ON FASE 1 
+###################################################
     def power_on(self, *args, **kwargs):
         """Handle startup routines"""
-        #Activamos el estado de ON
+        # Activamos el estado de ON
         self.bv_on = True
-        #Limpiamos estado
+        # Limpiamos estado
         status = None
-        #Esperamos nuevo estado
+        # Esperamos nuevo estado cuando envia POW_STATUSES
+        # Siguiente estado POW_STATUSES
         while status is None or status == 0x00:
             status, data = self.req_status()
             if not self.bv_on:
@@ -599,26 +607,44 @@ class BillVal:
                 return
         # update estado
         self.init_status = status
-
+       
+        # Estado POW_SATUSES 
+        # #Ya esta ready to fight 
         if status not in POW_STATUSES:
-            logging.warning("Acceptor already powered up, status: %02x" % status)
+            logging.warning(
+                "Acceptor already powered up, status: %02x" % status)
             return self.init_status
+        # Estado POW_UP para inicializar
         elif status == POW_UP:
             logging.info("Powering up...")
+            #Version Info
             logging.info("Getting version...")
+            # Siguiente estado Get_VERSION
             self.send_command(GET_VERSION)
             status, self.bv_version = self.read_response()
             logging.info("BV software version: %s" % self.bv_version.decode())
-
+            
+            # Estado POW_UP para inicializar
+            # Enviando 40H RESET 
+            self.buchu_reset()
             while status != ACK:
                 logging.debug("Sending reset command")
                 self.send_command(RESET)
                 status, data = self.read_response()
-
+            # Comprobamos que cambia el estado
             if self.req_status()[0] == INITIALIZE:
+                # AHORA ESTAMOS EN ESTADO INITIALIZED
                 self.initialize(*args, **kwargs)
+            ######################################
+            #    TODO: Implement  DONE
+            #             - community Mode 
+            #             - security Mode
+            #             - community Mode 
+            ######################################
+
+
         else:
-            # Acceptor should either reject or stack bill
+            # Esta en Reject  o Stack Mode
             while status != ACK:
                 self.send_command(RESET)
                 status, data = self.read_response()
@@ -629,83 +655,24 @@ class BillVal:
         # typically call BillVal.poll() after this
 
         return self.init_status
-
     def initialize(self, denom=[0x82, 0], sec=[0, 0], dir=[0], opt_func=[0, 0],
                    inhibit=[0], bar_func=[0x01, 0x12], bar_inhibit=[0]):
-        """Initialize BV settings"""
-
-        logging.debug("Setting denom inhibit: %r" % denom)
-        denom = bytes(denom)
-        self.send_command(SET_DENOM, denom)
-        status, data = self.read_response()
-        if (status, data) != (SET_DENOM, denom):
-            logging.warning("Acceptor did not echo denom settings")
-
-        logging.debug("Setting security: %r" % sec)
-        sec = bytes(sec)
-        self.send_command(SET_SECURITY, sec)
-        status, data = self.read_response()
-        if (status, data) != (SET_SECURITY, sec):
-            logging.warning("Acceptor did not echo security settings")
-
-        logging.debug("Setting direction inhibit: %r" % dir)
-        dir = bytes(dir)
-        self.send_command(SET_DIRECTION, dir)
-        status, data = self.read_response()
-        if (status, data) != (SET_DIRECTION, dir):
-            logging.warning("Acceptor did not echo direction settings")
-
-        logging.debug("Setting optional functions: %r" % opt_func)
-        opt_func = bytes(opt_func)
-        self.send_command(SET_OPT_FUNC, opt_func)
-        status, data = self.read_response()
-        if (status, data) != (SET_OPT_FUNC, opt_func):
-            logging.warning("Acceptor did not echo option function settings")
-
-        logging.debug("Setting inhibit: %r" % inhibit)
-        inhibit = bytes(inhibit)
-        self.send_command(SET_INHIBIT, inhibit)
-        status, data = self.read_response()
-        if (status, data) != (SET_INHIBIT, inhibit):
-            logging.warning("Acceptor did not echo inhibit settings")
-
-        logging.debug("Setting barcode functions: %r" % bar_func)
-        bar_func = bytes(bar_func)
-        self.send_command(SET_BAR_FUNC, bar_func)
-        status, data = self.read_response()
-        if (status, data) != (SET_BAR_FUNC, bar_func):
-            logging.warning("Acceptor did not echo barcode settings")
-
-        logging.debug("Setting barcode inhibit: %r" % bar_inhibit)
-        bar_inhibit = bytes(bar_inhibit)
-        self.send_command(SET_BAR_INHIBIT, bar_inhibit)
-        status, data = self.read_response()
-        if (status, data) != (SET_BAR_INHIBIT, bar_inhibit):
-            logging.warning("Acceptor did not echo barcode inhibit settings")
-
+        
+        """Initialize BV settings"""   
+        self.set_denom(denom)
+        self.set_security(sec)
+        self.set_direction(dir)
+        self.set_optional_func(opt_func)
+        self.set_inhibit(inhibit)
+        self.set_bacode_function(bar_func)
+        self.set_barcode_function(bar_inhibit)
         while self.req_status()[0] == INITIALIZE:
             # wait for initialization to finish
             time.sleep(0.2)
 
-    def req_status(self):
-        """Send status request to bill validator"""
-
-        if not self.bv_on:
-            # in case polling thread needs to be terminated before power up
-            return None, b''
-
-        if self.com.in_waiting:
-            # discard any unused data
-            logging.warning("Found unused data in buffer, %r" % self.com.read(self.com.in_waiting))
-
-        self.send_command(STATUS_REQ)
-
-        stat, data = self.read_response()
-        if stat not in self.all_statuses + (0x00, None):
-            logging.warning("Unknown status code received: %02x, data: %r" % stat, data)
-
-        return stat, data
-
+###################################################
+#  POLL FASE 2 Recoleccion de billetes 
+###################################################
     def poll(self, interval=0.2):
         """Send a status request to the bill validator every `interval` seconds
         and fire event handlers. `interval` defaults to 200 ms, per ID-003 spec.
@@ -725,9 +692,123 @@ class BillVal:
             wait = interval - (time.time() - poll_start)
             if wait > 0.0:
                 time.sleep(wait)
-                
-                
-    def buchu_reset(self):
+###################################################
+# BUCHUHELPER
+###################################################
+
+    def req_status(self):
+        """Send status request to bill validator"""
+
+        if not self.bv_on:
+            # in case polling thread needs to be terminated before power up
+            return None, b''
+
+        if self.com.in_waiting:
+            # discard any unused data
+            logging.warning("Found unused data in buffer, %r" %
+                            self.com.read(self.com.in_waiting))
+
+        self.send_command(STATUS_REQ)
+
+        stat, data = self.read_response()
+        if stat not in self.all_statuses + (0x00, None):
+            logging.warning(
+                "Unknown status code received: %02x, data: %r" % stat, data)
+
+        return stat, data
+
+    def set_denom(self,denom):
+        """
+        Command to set the receiving of each bill denomintation
+        ->:param bytes denom: [0x82, 0] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting denom inhibit: %r" % denom)
+        denom = bytes(denom)
+        self.send_command(SET_DENOM, denom)
+        status, data = self.read_response()
+        if (status, data) != (SET_DENOM, denom):
+            logging.warning("Acceptor did not echo denom settings")
+        
+    def set_security(self,sec):
+        """
+        Command to set the security config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting security: %r" % sec)
+        sec = bytes(sec)
+        self.send_command(SET_SECURITY, sec)
+        status, data = self.read_response()
+        if (status, data) != (SET_SECURITY, sec):
+            logging.warning("Acceptor did not echo security settings")
+     
+    def set_direction(self,dir):
+        """
+        Command to set the direction config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting direction inhibit: %r" % dir)
+        dir = bytes(dir)
+        self.send_command(SET_DIRECTION, dir)
+        status, data = self.read_response()
+        if (status, data) != (SET_DIRECTION, dir):
+            logging.warning("Acceptor did not echo direction settings")
+    
+    def set_optional_func(self,opt_func):
+        """
+        Command to set the optional function config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting optional functions: %r" % opt_func)
+        opt_func = bytes(opt_func)
+        self.send_command(SET_OPT_FUNC, opt_func)
+        status, data = self.read_response()
+        if (status, data) != (SET_OPT_FUNC, opt_func):
+            logging.warning("Acceptor did not echo option function settings")
+
+    def set_inhibit(self,inhibit):
+        """
+        Command to set the inhibit state
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting inhibit: %r" % inhibit)
+        inhibit = bytes(inhibit)
+        self.send_command(SET_INHIBIT, inhibit)
+        status, data = self.read_response()
+        if (status, data) != (SET_INHIBIT, inhibit):
+            logging.warning("Acceptor did not echo inhibit settings")
+
+    def set_bacode_function(self,inhibit):
+        """
+        Command to set the bar code config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting barcode functions: %r" % bar_func)
+        bar_func = bytes(bar_func)
+        self.send_command(SET_BAR_FUNC, bar_func)
+        status, data = self.read_response()
+        if (status, data) != (SET_BAR_FUNC, bar_func):
+            logging.warning("Acceptor did not echo barcode settings")
+
+    def set_barcode_function(self,inhibit):
+        """
+        Command to set the bar code config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("Setting barcode inhibit: %r" % bar_inhibit)
+        bar_inhibit = bytes(bar_inhibit)
+        self.send_command(SET_BAR_INHIBIT, bar_inhibit)
+        status, data = self.read_response()
+        if (status, data) != (SET_BAR_INHIBIT, bar_inhibit):
+            logging.warning("Acceptor did not echo barcode inhibit settings")
+
+    def reset(self):
         status = None
         while status != ACK:
             print("Sending buchu reset command")
@@ -736,21 +817,12 @@ class BillVal:
             if self.req_status()[0] == RESET:
                 print('BUCHU DONE')
 
-    def buchu_set_inhibit(self,data=0x00):
-        status = None
-        while status != ACK:
-            print("Sending buchu inhibit command")
-            self.send_command(SET_INHIBIT,bytes(data))
-            status, data = self.read_response()
-            if self.req_status()[0] == SET_INHIBIT:
-                print('BUCHU DONE SET_INHIBIT')
-    #data = bytes([0x02,0x00,0x01,0x08,0x00,0x02])
-    def buchu_set_recycler_config(self,data=bytes([0x02,0x00,0x01,0x08,0x00,0x02])):
+    def buchu_set_recycler_config(self, data=bytes([0x02, 0x00, 0x01, 0x08, 0x00, 0x02])):
         status = None
         while status != ACK:
             print("Sending buchu_set_recycler_config")
             length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
-            message = bytes([SYNC, length,240, 32, 208]) + data
+            message = bytes([SYNC, length, 240, 32, 208]) + data
             message += get_crc(message)
             self._raw('>', message)
             self.com.write(message)

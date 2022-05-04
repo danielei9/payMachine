@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from id003 import BillVal
-import id003 as Code
+from BillVal import BillVal
+import BillVal as Code
 import serial.tools.list_ports
 import serial
 import time
