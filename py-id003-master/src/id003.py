@@ -8,8 +8,7 @@ import logging
 ###
 ### Constants
 ###
-
-
+CHANGE_CONFIG_RECYCLER = 0xF0, 0x20, 0xD0
 ### General UCEMACHINES ###
 ACK = 0x50
 SYNC = 0xFC
@@ -170,8 +169,6 @@ FAILURE_CODES = {
 
 
 ### Bitfield constants ###
-# TODO move these to separate file?
-# Need some way of separating BV software versions
 
 ## Denom inhibit (SET_DENOM) ##
 # Two bytes, only first byte used
@@ -258,7 +255,7 @@ OPTIONS = {
 BAR_18_CHAR = 0x12
 BAR_MULTI = 0xFF  # required if OPT_24CHAR is set?
 
-
+#Exceptions 
 class CRCError(Exception):
     """Computed CRC does not match given CRC"""
     pass
@@ -283,6 +280,7 @@ class DenomError(Exception):
     """Unknown denomination reported in escrow"""
     pass
 
+#CRC CONFIG 
 
 def get_crc(message):
     """Get CRC value for a given bytes object using CRC-CCITT Kermit"""
@@ -326,13 +324,16 @@ def get_crc(message):
     for byte in message:
         crc = (crc >> 8) ^ TABLE[(crc ^ byte) & 0xff]
 
-    # convert to bytes, big-endian
+    # convert to bytes
     crc = '%04x' % crc
     crc = [int(crc[-2:], 16), int(crc[:-2], 16)]
 
     return bytes(crc)
 
-
+##
+## CLASS BILLVAL
+# represena el billeterom, sus diferentes estados y repseustas
+##
 class BillVal:
     """Represent an ID-003 bill validator as a subclass of `serial.Serial`"""
 
@@ -394,20 +395,23 @@ class BillVal:
             log = open('raw.log', 'a')
             log.write('{} {}\r\n'.format(pre, msg))
             log.close()
+#
 #  UART STATES
+#
+
 #  BOX FULL
     def _on_stacker_full(self, data):
         logging.error("Stacker full.")
-
+#  Stacker OPEN
     def _on_stacker_open(self, data):
         logging.warning("Stacker open.")
-
+# ACEPTANDO BILLETES
     def _on_acceptor_jam(self, data):
         logging.error("Acceptor jam.")
 
     def _on_stacker_jam(self, data):
         logging.error("Stacker jam.")
-
+# Cuanto el estado es pausa
     def _on_pause(self, data):
         logging.warning("BV paused. If there's a second bill being inserted, remove it.")
 
@@ -527,7 +531,10 @@ class BillVal:
         logging.warning("BV waiting for initialization")
         input("Press enter to reinitialize the BV.")
         self.initialize()
-
+## 
+##  Send default command 
+#       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2   
+## 
     def send_command(self, command, data=b''):
         """Send a generic command to the bill validator"""
 
@@ -579,17 +586,18 @@ class BillVal:
 
     def power_on(self, *args, **kwargs):
         """Handle startup routines"""
-
+        #Activamos el estado de ON
         self.bv_on = True
-
+        #Limpiamos estado
         status = None
+        #Esperamos nuevo estado
         while status is None or status == 0x00:
             status, data = self.req_status()
             if not self.bv_on:
-                # in case polling thread needs to be terminated before power up
+                # En caso de polling forzamos PowerUP
                 self.init_status = None
                 return
-
+        # update estado
         self.init_status = status
 
         if status not in POW_STATUSES:
@@ -736,13 +744,13 @@ class BillVal:
             status, data = self.read_response()
             if self.req_status()[0] == SET_INHIBIT:
                 print('BUCHU DONE SET_INHIBIT')
-    
-    def buchu_set_recycler_config(self,data=[0x02, 0,0x01,0x08,0,0x02]):
+    #data = bytes([0x02,0x00,0x01,0x08,0x00,0x02])
+    def buchu_set_recycler_config(self,data=bytes([0x02,0x00,0x01,0x08,0x00,0x02])):
         status = None
         while status != ACK:
-            print("Sending buchu inhibit command")
+            print("Sending buchu_set_recycler_config")
             length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
-            message = bytes([SYNC, length])+(0xF0, 0x20, 0xD0) + bytes(data)
+            message = bytes([SYNC, length,240, 32, 208]) + data
             message += get_crc(message)
             self._raw('>', message)
             self.com.write(message)
