@@ -38,7 +38,7 @@ GET_BOOT_VERSION = 0x89
 ################################
 
 STATUS_REQ = 0x11
-STATUS_REQ = bytearray(0xF0, 0x1A)
+STATUS_REQ_EXTENSAO = bytearray([0xF0, 0x1A])
 
 ## Operation commands ##
 RESET = 0x40
@@ -562,6 +562,7 @@ class BillVal:
 # Send default command
 #       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2
 ###################################################
+ 
     def send_command(self, command, data=b''):
         """Send a generic command to the bill validator"""
 
@@ -581,7 +582,7 @@ class BillVal:
         """Send a expansion command to the bill validator"""
         commandA = 0xF0
         length = 6 + len(data)  # SYNC, length, command, and 16-bit CRC
-        message = bytes([SYNC, length, commandA,command]) + data
+        message = bytes([SYNC, length, commandA,command]) + bytes(data)
         message += get_crc(message)
 
         # log message
@@ -665,7 +666,7 @@ class BillVal:
             
             # Estado POW_UP para inicializar
             # Enviando 40H RESET 
-            self.buchu_reset()
+            self.reset()
             while status != ACK:
                 logging.debug("Sending reset command")
                 self.send_command(RESET)
@@ -734,33 +735,39 @@ class BillVal:
 ###################################################
     def payout(self):
         """ """
+        print("payout start")
         (status,data) = self.req_status()
         while (status != INHIBIT):
             self.set_inhibit(0) 
             time.sleep(0.2)
             (status,data) = self.req_status()
-
+        print("payout state inhibit DONE")
         # REQUEST F0 + 1A ==> 
         # NORMAL F0 + 10 + data <==
         (status,data) = self.req_status()
-        while ((status != NORMAL) and (data[0]== 0x10)):
+        while (status != NORMAL):  #  and (data[0]== 0x10)):
             self.send_expansion_command(0x1A)
             print("send comand expansion 1A data")
             time.sleep(0.2)
             (status,data) = self.req_status()
-            print("status : " + str(data))
-
-        # PAY OUT F0 + 4A ==> en este caso (data = nBilletes stack)
-        # ACK 50 <==
-        commandData = [0x01,0x01] +  commandData
+            print("Data ")
+            print(data)
+            print("status : ")
+            print(status)
+            # PAY OUT F0 + 4A ==> en este caso (data = nBilletes stack)
+            # ACK 50 <==
+            commandData = [0x01,0x01]
         
-        (status,data) = self.req_status()
-        while (status != ACK):
-            self.send_expansion_command(0x4A, commandData) #TODO: MANEJAR COMMANDDATA
-            time.sleep(0.2)
             (status,data) = self.req_status()
-            print("PAY OUT F0 + 4A  WAITING ACK")
+            while (status != ACK):
+                self.send_expansion_command(0x4A, commandData) #TODO: MANEJAR COMMANDDATA
+                time.sleep(0.2)
+                (status,data) = self.req_status()
+                print("status ",status," data ",data)
+                print("PAY OUT F0 + 4A  WAITING ACK")
               
+    """
+        
         # STATUS REQUEST ==>
         # PAYING 20 <==
         (status,data) = self.req_status()
@@ -797,7 +804,7 @@ class BillVal:
         #---------------------------
         # STATUS REQUEST ==>
         # DISABLE 1A  <==
-
+    """
 
 ###################################################
 # BUCHUHELPER
@@ -889,7 +896,7 @@ class BillVal:
         if (status, data) != (SET_INHIBIT, inhibit):
             logging.warning("Acceptor did not echo inhibit settings")
 
-    def set_barcode_function(self,inhibit):
+    def set_barcode_function(self,bar_func):
         """
         Command to set the bar code config
         ->:param bytes sec: [0x00, 0x00] default
@@ -902,7 +909,7 @@ class BillVal:
         if (status, data) != (SET_BAR_FUNC, bar_func):
             logging.warning("Acceptor did not echo barcode settings")
 
-    def set_barcode_inhibit(self,inhibit):
+    def set_barcode_inhibit(self,bar_inhibit):
         """
         Command to set the bar code config
         ->:param bytes sec: [0x00, 0x00] default

@@ -9,8 +9,8 @@ import logging
 
 
 def main():
-    #port = '/dev/ttyUSB0'  # JCM UAC device (USB serial adapter)
-    port = 'COM31'  # JCM UAC device (USB serial adapter)
+    port = '/dev/ttyUSB0'  # JCM UAC device (USB serial adapter)
+#     port = 'COM31'  # JCM UAC device (USB serial adapter)
     
     bv = BillVal(port)
     print("Please connect bill validator.")
@@ -24,9 +24,12 @@ def main():
         logging.info("BV powered up with bill in stacker.")
     
     if bv.init_status == Code.IDLE:
-        print("hola")
-    bv.buchu_set_recycler_config()
-    bv.buchu_set_inhibit()
+        print("Setting to INHIBIT/DISABLE (enable setting buchubills)")
+        bv.payout()
+    (status,data) = bv.req_status()
+    """if  status == Code.INHIBIT:
+        print("Setting to INHIBIT/DISABLE (enable setting buchubills)")
+        bv.set_inhibit(1)"""
 
     bv.poll()
 # FC   09   F0   20   4A   01  02 // 8B   5C
