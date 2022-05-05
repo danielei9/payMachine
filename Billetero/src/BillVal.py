@@ -8,8 +8,7 @@ import logging
 ###
 # Constants
 ###
-CHANGE_CONFIG_RECYCLER = 0xF0, 0x20, 0xD0
-### General UCEMACHINES ###
+
 ACK = 0x50
 SYNC = 0xFC
 
@@ -34,9 +33,12 @@ GET_BAR_INHIBIT = 0x87
 GET_VERSION = 0x88
 GET_BOOT_VERSION = 0x89
 
-
+################################
 ### Controller -> Acceptor ###
+################################
+
 STATUS_REQ = 0x11
+STATUS_REQ = bytearray(0xF0, 0x1A)
 
 ## Operation commands ##
 RESET = 0x40
@@ -46,8 +48,9 @@ RETURN = 0x43
 HOLD = 0x44
 WAIT = 0x45
 
-
+################################
 ### Acceptor -> Controller ###
+################################
 
 ## Status ##
 ENABLE = 0x11
@@ -63,9 +66,13 @@ HOLDING = 0x19
 DISABLE = 0x1A
 INHIBIT = 0x1A  # Alias for DISABLE
 INITIALIZE = 0x1B
-
 NORM_STATUSES = tuple(range(0x11, 0x1C))
-
+## Status extension ##
+NORMAL = 0x10 #  + data 
+PAYING = 0x20
+PAY_STAY= 0x24
+PAY_VALID= 0x23
+ 
 ## Power up status ##
 POW_UP = 0x40
 POW_UP_BIA = 0x41  # Power up with bill in acceptor
@@ -82,11 +89,19 @@ CHEATED = 0x48
 FAILURE = 0x49
 COMM_ERROR = 0x4A
 INVALID_COMMAND = 0x4B
-
 ERROR_STATUSES = tuple(range(0x43, 0x4C))
+## Error status Extension##
+RECYCLER_JAM = 0x40
+DOOR_OPEN = 0x41
+MOTOR_ERROR = 0x42
+EEPROM_ERROR = 0x43
+PAY_OUT_NOTE_ERROR = 0x44
+RECYCLE_BOX_OPEN = 0x45
+HARDWARE_ERROR = 0x4A
 
-
+################################
 ### Data constants ###
+################################
 
 ## Escrow ##
 DENOM_1 = 0x61
@@ -167,8 +182,9 @@ FAILURE_CODES = {
     EXT_ROM_WRT_FAULT: "External ROM write failure",
 }
 
-
+############################
 ### Bitfield constants ###
+############################
 
 ## Denom inhibit (SET_DENOM) ##
 # Two bytes, only first byte used
@@ -396,9 +412,9 @@ class BillVal:
             log = open('raw.log', 'a')
             log.write('{} {}\r\n'.format(pre, msg))
             log.close()
-#
+####################################
 #  UART STATES
-#
+####################################
 #       BOX FULL
     def _on_stacker_full(self, data):
         logging.error("Stacker full.")
@@ -463,6 +479,14 @@ class BillVal:
             s_r = input("(1) Stack and acknowledge when bill passes stacker lever\n"
                         "(2) Stack and acknowledge when bill is stored\n"
                         "(R)eturn ").lower()
+            if self.bv_denoms[escrow] == 10:
+                print("Billete de 10 ")
+            if self.bv_denoms[escrow] == 20:
+                print("Billete de 20 ")
+            if self.bv_denoms[escrow] == 5:
+                print("Billete de 5 ")
+            if self.bv_denoms[escrow] == 50:
+                print("Billete de 50 ")
             if s_r == '1':
                 logging.info("Sending Stack-1 command...")
                 self.accepting_denom = self.bv_denoms[escrow]
@@ -482,7 +506,7 @@ class BillVal:
                 logging.debug("Received ACK")
                 self.bv_status = None
             elif s_r == 'r':
-                logging.info("Telling BV to return...")
+                logging.info("BV to return...")
                 status = None
                 while status != ACK:
                     self.send_command(RETURN, b'')
@@ -543,6 +567,21 @@ class BillVal:
 
         length = 5 + len(data)  # SYNC, length, command, and 16-bit CRC
         message = bytes([SYNC, length, command]) + data
+        message += get_crc(message)
+
+        # log message
+        self._raw('>', message)
+
+        return self.com.write(message)
+###################################################
+# Send expansion command
+#       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2
+###################################################
+    def send_expansion_command(self, command, data=b''):
+        """Send a expansion command to the bill validator"""
+        commandA = 0xF0
+        length = 6 + len(data)  # SYNC, length, command, and 16-bit CRC
+        message = bytes([SYNC, length, commandA,command]) + data
         message += get_crc(message)
 
         # log message
@@ -641,20 +680,18 @@ class BillVal:
             #             - security Mode
             #             - community Mode 
             ######################################
-
-
         else:
             # Esta en Reject  o Stack Mode
             while status != ACK:
                 self.send_command(RESET)
                 status, data = self.read_response()
-
             if self.req_status()[0] == INITIALIZE:
                 self.initialize(*args, **kwargs)
 
-        # typically call BillVal.poll() after this
+        #  BillVal.poll() 
 
         return self.init_status
+
     def initialize(self, denom=[0x82, 0], sec=[0, 0], dir=[0], opt_func=[0, 0],
                    inhibit=[0], bar_func=[0x01, 0x12], bar_inhibit=[0]):
         
@@ -664,8 +701,8 @@ class BillVal:
         self.set_direction(dir)
         self.set_optional_func(opt_func)
         self.set_inhibit(inhibit)
-        self.set_bacode_function(bar_func)
-        self.set_barcode_function(bar_inhibit)
+        self.set_barcode_inhibit(bar_inhibit)
+        self.set_barcode_function(bar_func)
         while self.req_status()[0] == INITIALIZE:
             # wait for initialization to finish
             time.sleep(0.2)
@@ -681,7 +718,6 @@ class BillVal:
         set `self.bv_status` to None to force event handler to fire on the next
         status request.
         """
-
         while True:
             poll_start = time.time()
             status, data = self.req_status()
@@ -692,6 +728,77 @@ class BillVal:
             wait = interval - (time.time() - poll_start)
             if wait > 0.0:
                 time.sleep(wait)
+
+###################################################
+#  PAYOUT FASE 3 Pago de billetes 
+###################################################
+    def payout(self):
+        """ """
+        (status,data) = self.req_status()
+        while (status != INHIBIT):
+            self.set_inhibit(0) 
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+
+        # REQUEST F0 + 1A ==> 
+        # NORMAL F0 + 10 + data <==
+        (status,data) = self.req_status()
+        while ((status != NORMAL) and (data[0]== 0x10)):
+            self.send_expansion_command(0x1A)
+            print("send comand expansion 1A data")
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+            print("status : " + str(data))
+
+        # PAY OUT F0 + 4A ==> en este caso (data = nBilletes stack)
+        # ACK 50 <==
+        commandData = [0x01,0x01] +  commandData
+        
+        (status,data) = self.req_status()
+        while (status != ACK):
+            self.send_expansion_command(0x4A, commandData) #TODO: MANEJAR COMMANDDATA
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+            print("PAY OUT F0 + 4A  WAITING ACK")
+              
+        # STATUS REQUEST ==>
+        # PAYING 20 <==
+        (status,data) = self.req_status()
+        while(status != PAYING):
+            print("PAYING ...")
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+        
+        # STATUS REQUEST ==>
+        # PAY STAY 24 <==
+        (status,data) = self.req_status()
+        while(status != PAY_STAY):
+            print("PAY_STAY ...")
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+        
+        # STATUS REQUEST ==>
+        # PAY VALID 23 <==
+        (status,data) = self.req_status()
+        while(status != PAY_VALID):
+            print("PAY_VALID ...")
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+        # STATUS REQUEST ==>
+        # PAY VALID 50 <==
+        # ACK ==>
+
+        (status,data) = self.req_status()
+        while(status != ACK):
+            print("ACK ...")
+            self.send_command(ACK)
+            time.sleep(0.2)
+            (status,data) = self.req_status()
+        #---------------------------
+        # STATUS REQUEST ==>
+        # DISABLE 1A  <==
+
+
 ###################################################
 # BUCHUHELPER
 ###################################################
@@ -782,7 +889,7 @@ class BillVal:
         if (status, data) != (SET_INHIBIT, inhibit):
             logging.warning("Acceptor did not echo inhibit settings")
 
-    def set_bacode_function(self,inhibit):
+    def set_barcode_function(self,inhibit):
         """
         Command to set the bar code config
         ->:param bytes sec: [0x00, 0x00] default
@@ -795,7 +902,7 @@ class BillVal:
         if (status, data) != (SET_BAR_FUNC, bar_func):
             logging.warning("Acceptor did not echo barcode settings")
 
-    def set_barcode_function(self,inhibit):
+    def set_barcode_inhibit(self,inhibit):
         """
         Command to set the bar code config
         ->:param bytes sec: [0x00, 0x00] default
@@ -808,6 +915,19 @@ class BillVal:
         if (status, data) != (SET_BAR_INHIBIT, bar_inhibit):
             logging.warning("Acceptor did not echo barcode inhibit settings")
 
+    def rc_status_request(self,data):
+        """
+        Command to set the bar code config
+        ->:param bytes sec: [0x00, 0x00] default
+        :send_command bytes: [SYNC LNG CMD DATA CRCL CRCH] 
+        """
+        logging.debug("RC request status (extension) ")
+        RC_STATUS_REQUEST = bytes(0xF0,0x1A)
+        self.send_command(RC_STATUS_REQUEST, bytes(data))
+        status, data = self.read_response()
+        if (status, data) != (0xF0, data):
+            logging.warning("Acceptor did not echo status request (extension)")
+
     def reset(self):
         status = None
         while status != ACK:
@@ -816,16 +936,17 @@ class BillVal:
             status, data = self.read_response()
             if self.req_status()[0] == RESET:
                 print('BUCHU DONE')
-
-    def buchu_set_recycler_config(self, data=bytes([0x02, 0x00, 0x01, 0x08, 0x00, 0x02])):
-        status = None
-        while status != ACK:
-            print("Sending buchu_set_recycler_config")
-            length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
-            message = bytes([SYNC, length, 240, 32, 208]) + data
-            message += get_crc(message)
-            self._raw('>', message)
-            self.com.write(message)
-            status, data = self.read_response()
-            if self.req_status()[0] == SET_INHIBIT:
-                print('BUCHU DONE SET_INHIBIT')
+                
+    # TEST 2
+    # def buchu_set_recycler_config(self, data=bytes([0x02, 0x00, 0x01, 0x08, 0x00, 0x02])):
+    #     status = None
+    #     while status != ACK:
+    #         print("Sending buchu_set_recycler_config")
+    #         length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
+    #         message = bytes([SYNC, length, 240, 32, 208]) + data
+    #         message += get_crc(message)
+    #         self._raw('>', message)
+    #         self.com.write(message)
+    #         status, data = self.read_response()
+    #         if self.req_status()[0] == SET_INHIBIT:
+    #             print('BUCHU DONE SET_INHIBIT')
