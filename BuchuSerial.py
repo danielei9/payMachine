@@ -43,7 +43,7 @@ class BuchuSerial():
 # Can check all available ports and select one 
 # TODO: check auto-selection
     def serial_ports(self):
-        ports = glob.glob('/dev/tty[A-Za-z]*')
+        ports = glob.glob('/dev/ttyUSB*')
         result = []
         for port in ports:
             try:
@@ -66,7 +66,7 @@ class BuchuSerial():
                                        parity=serial.PARITY_NONE,
                                        stopbits=serial.STOPBITS_ONE)
         except:
-            print("ReConnecting to " + str(ports[0]))
+            print("ReConnecting to " + str(ports))
             time.sleep(5)
             self.serialBegin()
             return False
@@ -79,7 +79,7 @@ class BuchuSerial():
             self.portConfig.write(str(xData).encode())
             return True
         except serial.SerialException:
-            print('Port is not available')
+            print('Port is not available at write string')
             return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
@@ -95,7 +95,7 @@ class BuchuSerial():
             self.portConfig.write(xData)
             return True
         except serial.SerialException:
-            print('Port is not available')
+            print('Port is not available at write')
             return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
@@ -110,7 +110,7 @@ class BuchuSerial():
             self.portConfig.open()
             return True
         except serial.SerialException:
-            print('Port is not available')
+            print('Port is not available in openening')
             return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
@@ -127,7 +127,7 @@ class BuchuSerial():
             print('Port is not available')
             return False
         except serial.portNotOpenError:
-            print('Attempting to use a port that is not open')
+            print('Attempting to use a port that is not open in read line')
             return False
         except:
             print("Not possible to read port")
@@ -138,7 +138,7 @@ class BuchuSerial():
         try:
             return self.portConfig.read(n)
         except serial.SerialException:
-            print('Port is not available')
+            print('Port is not available in read x bytes')
             return False
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
@@ -167,7 +167,7 @@ class BuchuSerial():
             self.portConfig.close()
             return True
         except serial.SerialException:
-            print('Port is not available')
+            print('Port is not available in close')
         except serial.portNotOpenError:
             print('Attempting to use a port that is not open')
         except:
@@ -176,24 +176,49 @@ class BuchuSerial():
 
 # Try ti send a command and return the answer from this command
     def serialSend(self, xData, TTL=2):
-        # try to close if it is already open
-        self.serialClose()
-        # try to open
-        self.serialOpen()
-        # try to send
-        self.serialWrite(xData)
-        # try to read if available
-        count = 0
-        startTimeOut = time.time()
-        while (not self.serialAvailable()):
-            print("waiting response...")
-            endTimeOut = time.time()
-            time.sleep(1)
-            # TimeOut
-            if (endTimeOut - startTimeOut >= TTL):  # TODO: DEFINE TTL
-                return -1
-        response = self.serialReadLine()
-        # print(response)
-        self.serialClose()
-        return response
+        try:# try to open
+            if not self.portConfig.isOpen():
+                self.serialOpen()
+            # try to send
+            self.serialWrite(xData)
+            return 1
+        except:
+            print("Error sending")
+            pass
+# Serial Flush
+    def serialFlush(self):
+        try:# try to open
+            if not self.portConfig.isOpen():
+                self.serialOpen()
+            self.portConfig.flush()
+            return 1
+        except:
+            print("Error flush")
+            pass
+            
+   
+    def serialSendAndReceive(self, xData, TTL=2):
+   # try to open
+        try:# try to open
+#             if not self.portConfig.isOpen():
+#                 self.serialOpen()
+            # try to send
+            self.serialWrite(xData)
+            # try to read if available
+            count = 0
+            startTimeOut = time.time()
+            while (not self.serialAvailable()):
+                print("waiting response...")
+                endTimeOut = time.time()
+                time.sleep(1)
+                # TimeOut
+                if (endTimeOut - startTimeOut >= TTL):  # TODO: DEFINE TTL
+                    return -1
+            response = self.serialReadLine()
+            # print(response)
+            return response
+        except:
+            print("Error sending")
+            pass
+            
 

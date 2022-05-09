@@ -578,13 +578,16 @@ class BillVal:
 # Send expansion command
 #       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2
 ###################################################
+    def sendRawCommand(self):
+        return self.com.write(bytes([0xFC ,0x0D, 0xF0, 0x20, 0xD0, 0x04, 0x00, 0x01, 0x08, 0x00, 0x02, 0x40, 0x5A]))
+        
     def send_expansion_command(self, command, data=b''):
         """Send a expansion command to the bill validator"""
         commandA = 0xF0
         length = 6 + len(data)  # SYNC, length, command, and 16-bit CRC
         message = bytes([SYNC, length, commandA,command]) + bytes(data)
         message += get_crc(message)
-
+# [FC 0D F0 20 D0 04 00 01 08 00 02 40 5A
         # log message
         self._raw('>', message)
 
@@ -713,7 +716,7 @@ class BillVal:
 ###################################################
     def poll(self, interval=0.2):
         """Send a status request to the bill validator every `interval` seconds
-        and fire event handlers. `interval` defaults to 200 ms, per ID-003 spec.
+        and fire event handlers. `interval` defaults to 200 ms
 
         Event handlers are only fired upon status changes. Event handlers can
         set `self.bv_status` to None to force event handler to fire on the next
@@ -746,7 +749,7 @@ class BillVal:
         # NORMAL F0 + 10 + data <==
         (status,data) = self.req_status()
         while (status != NORMAL):  #  and (data[0]== 0x10)):
-            self.send_expansion_command(0x1A)
+            self.send_expansion_command(0x4A,[0x01 ,0x01])
             print("send comand expansion 1A data")
             time.sleep(0.2)
             (status,data) = self.req_status()
@@ -759,15 +762,14 @@ class BillVal:
             commandData = [0x01,0x01]
         
             (status,data) = self.req_status()
-            while (status != ACK):
-                self.send_expansion_command(0x4A, commandData) #TODO: MANEJAR COMMANDDATA
+            if (status != ACK):
+                self.send_expansion_command(0x10, commandData) #TODO: MANEJAR COMMANDDATA
                 time.sleep(0.2)
                 (status,data) = self.req_status()
                 print("status ",status," data ",data)
                 print("PAY OUT F0 + 4A  WAITING ACK")
               
     """
-        
         # STATUS REQUEST ==>
         # PAYING 20 <==
         (status,data) = self.req_status()
@@ -944,16 +946,16 @@ class BillVal:
             if self.req_status()[0] == RESET:
                 print('BUCHU DONE')
                 
-    # TEST 2
-    # def buchu_set_recycler_config(self, data=bytes([0x02, 0x00, 0x01, 0x08, 0x00, 0x02])):
-    #     status = None
-    #     while status != ACK:
-    #         print("Sending buchu_set_recycler_config")
-    #         length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
-    #         message = bytes([SYNC, length, 240, 32, 208]) + data
-    #         message += get_crc(message)
-    #         self._raw('>', message)
-    #         self.com.write(message)
-    #         status, data = self.read_response()
-    #         if self.req_status()[0] == SET_INHIBIT:
-    #             print('BUCHU DONE SET_INHIBIT')
+#      TEST 2
+    def buchu_set_recycler_config(self, data=bytes([0x02, 0x00, 0x01, 0x08, 0x00, 0x02])):
+        status = None
+        while status != ACK:
+            print("Sending buchu_set_recycler_config")
+            length = 8 + len(data)  # SYNC, length, command, and 16-bit CRC
+            message = bytes([SYNC, length, 240, 32, 208]) + data
+            message += get_crc(message)
+            self._raw('>', message)
+            self.com.write(message)
+            status, data = self.read_response()
+            if self.req_status()[0] == SET_INHIBIT:
+                print('BUCHU DONE SET_INHIBIT')

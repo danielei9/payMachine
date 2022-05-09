@@ -24,12 +24,16 @@ def main():
         logging.info("BV powered up with bill in stacker.")
     
     if bv.init_status == Code.IDLE:
+        #Con esto podemos cambiar de estado de IDLE a dar billetes
         print("Setting to INHIBIT/DISABLE (enable setting buchubills)")
         bv.payout()
     (status,data) = bv.req_status()
-    """if  status == Code.INHIBIT:
+    """
+        #Con esto podemos cambiar de estado de recoger billetes a dar billetes
+        if  status == Code.INHIBIT:
         print("Setting to INHIBIT/DISABLE (enable setting buchubills)")
-        bv.set_inhibit(1)"""
+        bv.set_inhibit(1)
+    """
 
     bv.poll()
 # FC   09   F0   20   4A   01  02 // 8B   5C
