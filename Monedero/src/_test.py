@@ -28,7 +28,7 @@ while True:
         elif s_r == '2':
             qnty = ' '
             while qnty in (' '):
-                qnty = input("Quantity to pay")
+                qnty = input("Quantity to pay: ")
             print(cW.cashBackRoutine(float(qnty)))
             break
         elif s_r == '3':
