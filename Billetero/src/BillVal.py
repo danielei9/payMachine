@@ -738,36 +738,23 @@ class BillVal:
 ###################################################
     def payout(self):
         """ """
+        
         print("payout start")
         (status,data) = self.req_status()
         while (status != INHIBIT):
-            self.set_inhibit(0) 
+            self.set_inhibit(1) 
             time.sleep(0.2)
             (status,data) = self.req_status()
-        print("payout state inhibit DONE")
-        # REQUEST F0 + 1A ==> 
-        # NORMAL F0 + 10 + data <==
-        (status,data) = self.req_status()
-        while (status != NORMAL):  #  and (data[0]== 0x10)):
-            self.send_expansion_command(0x4A,[0x01 ,0x01])
-            print("send comand expansion 1A data")
-            time.sleep(0.2)
-            (status,data) = self.req_status()
-            print("Data ")
-            print(data)
-            print("status : ")
-            print(status)
-            # PAY OUT F0 + 4A ==> en este caso (data = nBilletes stack)
-            # ACK 50 <==
-            commandData = [0x01,0x01]
+        print("payout state inhibit 01 DONE")
         
+    def settingsCurrencyRecycler():
+        print("settingsCurrencyRecycler")
+        (status,data) = self.req_status()
+        while (status != INHIBIT):
+            self.send_command(0xF0,0x20,0xD0,0x04,0x00,0x01,0x08,0x00,0x02) 
+            time.sleep(0.2)
             (status,data) = self.req_status()
-            if (status != ACK):
-                self.send_expansion_command(0x10, commandData) #TODO: MANEJAR COMMANDDATA
-                time.sleep(0.2)
-                (status,data) = self.req_status()
-                print("status ",status," data ",data)
-                print("PAY OUT F0 + 4A  WAITING ACK")
+        print("settingsCurrencyRecycler DONE")
               
     """
         # STATUS REQUEST ==>
