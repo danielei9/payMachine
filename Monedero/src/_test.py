@@ -1,10 +1,7 @@
 import CoinWallet 
 import time
-def cb(data):
-    print("cb " + str(data))
-    
-cW = CoinWallet.CoinWallet(cb)
 
+cW = CoinWallet.CoinWallet()
 time.sleep(1)
 cW.reset()
 cW.setup()

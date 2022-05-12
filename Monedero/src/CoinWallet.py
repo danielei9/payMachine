@@ -60,6 +60,7 @@ SETUP = [0x09]
 """
 RESET = [0x08]
 """
+
     # Z1 - Z2 = Tube Full Status - 2 bytes 
 Indicates status of coin tube for coin types 0 to 15. 
 A bit is set to indicate a full tube. For example, bit 7 = set would
@@ -102,7 +103,7 @@ class CoinWallet():
     """-------------------------- COINWALLET() ------------------------------"""
     """-------------------------- PRIVATE FUNCTIONS ------------------------------"""
     """-------------------------- Constructor ------------------------------"""
-    def __init__(self, cb):
+    def __init__(self):
         self.proc = multiprocessing.Process(target=self.threadReceived, args=())
         self.proc.daemon = True
         self.conn = BuchuSerial.BuchuSerial()
@@ -114,40 +115,28 @@ class CoinWallet():
             ZERO_TEN: self.__onInserted10Cent,
             ZERO_ZERO_FIVE: self.__onInserted05Cent,
         }
-        self.cb = cb
+        
 
     """-------------------------- EVENTS ------------------------------"""
    
-    def __onInserted05Cent(self,data):
+    def __onInserted05Cent(self,data=''):
         if(self.data[0] == '50'  ):
             print("0.05 euro")
-            self.cb(0.05)
-            
-    def __onInserted10Cent(self,data):
+    def __onInserted10Cent(self,data=''):
         if(self.data[0] == '51'  ):
             print("0.10 euro")
-            self.cb(0.10)
-            
-    def __onInserted20Cent(self,data):
+    def __onInserted20Cent(self,data=''):
         if(self.data[0] == '52'  ):
             print("0.20 euro")
-            self.cb(0.2)
-
-    def __onInserted50Cent(self,data):
+    def __onInserted50Cent(self,data=''):
         if(self.data[0] == '53'  ):
             print("0.50 euro")
-            self.cb(0.5)
-
-    def __onInsertedEuro(self,data):
+    def __onInsertedEuro(self,data=''):
         if(self.data[0] == '54'):
             print("1 euro")
-            self.cb(1)
-
-    def __onInserted2Euro(self,data):
+    def __onInserted2Euro(self,data=''):
         if(self.data[0] == '55'  ):
-            print("2 euros")
-            self.cb(2)
-
+            print("2 euros")            
     # # # # # # # # # # # # # # # # # # # # # # 
    
     """--------------------------send command ------------------------------"""
@@ -293,7 +282,6 @@ class CoinWallet():
         """
         self.proc.start()
         self.enableInsertCoins()
-        self.cb("start")
     """--------------------------stopReceivingMode------------------------------"""
     def stopReceivingMode(self):
         """
@@ -303,50 +291,49 @@ class CoinWallet():
         self.proc.close()
         self.statusDeactiveThread = True
 
-# 
-# if __name__=='__main__':
-#     cW = CoinWallet()
-#     time.sleep(1)
-#     cW.reset()
-#     cW.setup()
-# #     cW.startReceivingMode()
-#     time.sleep(2)
-#     cW.enableInsertCoins()
-#     time.sleep(2)
-# #     print(cW.cashBackRoutine(0.85))
-# 
-#     while True:
-#         s_r = ''
-#         while s_r not in ('1', '2', '3','4','4','5' ,'r'):
-#             s_r = input(    "(1) Mode Input Coin (Polling and denoms)\n"
-#                             "(2) Mode PayOut (add space and quantity) \n"
-#                             "(3) RESET MACHINE \n"
-#                             "(4) STATUS MACHINE \n"
-#                             "(5) TUBE STATUS \n"
-#                             "(6) Enabke insert coins \n"
-#                             "(R)eturn ").lower()
-#             if s_r == '1':
-#                 cW.enableInsertCoins()
-#                 cW.startReceivingMode()
-#                 break
-#             elif s_r == '2':
-#                 qnty = ' '
-#                 while qnty in (' '):
-#                     qnty = input("Quantity to pay")
-#                 print(cW.cashBackRoutine(float(qnty)))
-#                 break
-#             elif s_r == '3':
-#                 print("Reset")
-#                 cW.reset()
-#                 break
-#             elif s_r == '4':
-#                 print("setup")
-#                 cW.setup()
-#                 break
-#             elif s_r == '5':
-#                 cW.tubeStatus()
-#                 break
-#             elif s_r == '6':
-#                cW.enableInsertCoins()
-#                break
 
+if __name__=='__main__':
+    cW = CoinWallet()
+    time.sleep(1)
+    cW.reset()
+    cW.setup()
+#     cW.startReceivingMode()
+    time.sleep(2)
+    cW.enableInsertCoins()
+    time.sleep(2)
+#     print(cW.cashBackRoutine(0.85))
+
+    while True:
+        s_r = ''
+        while s_r not in ('1', '2', '3','4','4','5' ,'r'):
+            s_r = input(    "(1) Mode Input Coin (Polling and denoms)\n"
+                            "(2) Mode PayOut (add space and quantity) \n"
+                            "(3) RESET MACHINE \n"
+                            "(4) STATUS MACHINE \n"
+                            "(5) TUBE STATUS \n"
+                            "(6) Enabke insert coins \n"
+                            "(R)eturn ").lower()
+            if s_r == '1':
+                cW.enableInsertCoins()
+                cW.startReceivingMode()
+                break
+            elif s_r == '2':
+                qnty = ' '
+                while qnty in (' '):
+                    qnty = input("Quantity to pay")
+                print(cW.cashBackRoutine(float(qnty)))
+                break
+            elif s_r == '3':
+                print("Reset")
+                cW.reset()
+                break
+            elif s_r == '4':
+                print("setup")
+                cW.setup()
+                break
+            elif s_r == '5':
+                cW.tubeStatus()
+                break
+            elif s_r == '6':
+               cW.enableInsertCoins()
+               break
