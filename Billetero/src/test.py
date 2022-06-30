@@ -26,7 +26,7 @@ def main():
     if bv.init_status == Code.IDLE:
         #Con esto podemos cambiar de estado de IDLE a dar billetes
         print("Setting to INHIBIT/DISABLE (enable setting buchubills)")
-        bv.payout()
+        #bv.payout() 
     (status,data) = bv.req_status()
     """
         #Con esto podemos cambiar de estado de recoger billetes a dar billetes

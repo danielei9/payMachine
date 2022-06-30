@@ -578,8 +578,9 @@ class BillVal:
 # Send expansion command
 #       HEAD => SYNC(FC) LENGTH [command] [data] CRC1 CRC2
 ###################################################
+        # FC 09 F0 20 4A 01 02 8B 5C
     def sendRawCommand(self):
-        return self.com.write(bytes([0xFC ,0x0D, 0xF0, 0x20, 0xD0, 0x04, 0x00, 0x01, 0x08, 0x00, 0x02, 0x40, 0x5A]))
+        return self.com.write(bytes([0xFC ,0x09, 0xF0, 0x20, 0x4A, 0x01, 0x02, 0x8B, 0x5C]))
         
     def send_expansion_command(self, command, data=b''):
         """Send a expansion command to the bill validator"""
@@ -738,7 +739,6 @@ class BillVal:
 ###################################################
     def payout(self):
         """ """
-        
         print("payout start")
         (status,data) = self.req_status()
         while (status != INHIBIT):
